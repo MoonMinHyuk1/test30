@@ -18,7 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.example.test30.MyFirebaseMessagingService.Companion.token
-import com.google.firebase.firestore.FirebaseFirestore
+//import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessagingService
 import kotlinx.android.synthetic.main.gongji_insert_main.*
 import kotlinx.android.synthetic.main.gongji_insert_main.back_button
@@ -37,10 +37,10 @@ class GongjiInsertActivity : AppCompatActivity() {
     private val channelID = "com.example.test30.channel1"
     private var notificationManager : NotificationManager? = null
     private val KEY_REPLY = "key_reply"
-    val firestore = FirebaseFirestore.getInstance()
+    //val firestore = FirebaseFirestore.getInstance()
     var tokens = mutableListOf<String>()
 
-    private val fireStore = FirebaseFirestore.getInstance()
+    //private val fireStore = FirebaseFirestore.getInstance()
 
     val current : Long = System.currentTimeMillis()
     val format1 = SimpleDateFormat("yyyy-MM-dd")
@@ -70,14 +70,15 @@ class GongjiInsertActivity : AppCompatActivity() {
             userId = MySharedPreferences.getUserId(this)
         }
 
-        firestore.collection("Information")
-            .get()
-            .addOnSuccessListener { result ->
-                for(document in result) {
-                    val token = document["token"].toString()
-                    tokens.add(token)
-                }
-            }
+//        firestore.collection("Information")
+//            .get()
+//            .addOnSuccessListener { result ->
+//                for(document in result) {
+//                    val token = document["token"].toString()
+//                    tokens.add(token)
+//                }
+//            }
+        selectInformation()
 
         back_button.setOnClickListener({
             if(MySharedPreferences.getUserType(this).equals("0")) {
@@ -229,6 +230,44 @@ class GongjiInsertActivity : AppCompatActivity() {
                     var result = response.body().toString()
                     Log.d("Reg", "onResponse Success : " + response.toString())
                     Log.d("Reg", "onResponse Success : " + result)
+                }
+                else {
+                    Log.d("Reg", "onResponse Failed")
+                }
+            }
+
+            override fun onFailure(call: Call<String>, t: Throwable) {
+                Log.d("Reg", "error : " + t.message.toString())
+            }
+        })
+    }
+
+    private fun selectInformation() {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://sejongcountry.dothome.co.kr/")
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val service = retrofit.create(InformationInterface::class.java)
+        val call: Call<String> = service.selectInformation()
+        call.enqueue(object: Callback<String> {
+            override fun onResponse(call: Call<String>, response: Response<String>) {
+                if(response.isSuccessful && response.body() != null) {
+                    var result = response.body().toString()
+                    Log.d("Reg", "onResponse Success : " + response.toString())
+                    Log.d("Reg", "onResponse Success : " + result)
+
+                    val info = JSONObject(result)
+                    val array = info.optJSONArray("result")
+                    var i = 0
+                    while(i < array.length()) {
+                        val jsonObject = array.getJSONObject(i)
+                        val token = jsonObject.getString("TOKEN")
+
+                        tokens.add(token)
+
+                        i++
+                    }
                 }
                 else {
                     Log.d("Reg", "onResponse Failed")

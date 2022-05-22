@@ -18,7 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
+//import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.android.synthetic.main.create_id_main.*
@@ -38,7 +38,7 @@ import java.security.NoSuchAlgorithmException
 class SettingActivity : AppCompatActivity() {
 
     var auth : FirebaseAuth? = null
-    var firestore : FirebaseFirestore? = null
+    //var firestore : FirebaseFirestore? = null
     var userId = ""
     var userPw = ""
     var userToken = ""
@@ -61,7 +61,7 @@ class SettingActivity : AppCompatActivity() {
         }
 
         auth = Firebase.auth
-        firestore = FirebaseFirestore.getInstance()
+        //firestore = FirebaseFirestore.getInstance()
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if(task.isSuccessful) {
                 userToken = task.result
@@ -195,7 +195,8 @@ class SettingActivity : AppCompatActivity() {
     }
 
     private fun logoutFireBase() {
-        firestore?.collection("Information")?.document(userToken)?.delete()
+        //firestore?.collection("Information")?.document(userToken)?.delete()
+        deleteInformation(userToken)
     }
 
     private fun deleteUser(ID: String) {
@@ -206,6 +207,32 @@ class SettingActivity : AppCompatActivity() {
             .build()
         val service = retrofit.create(RegisterInterface::class.java)
         val call: Call<String> = service.deleteUser(ID)
+        call.enqueue(object: Callback<String> {
+            override fun onResponse(call: Call<String>, response: Response<String>) {
+                if(response.isSuccessful && response.body() != null) {
+                    var result = response.body().toString()
+                    Log.d("Reg", "onResponse Success : " + response.toString())
+                    Log.d("Reg", "onResponse Success : " + result)
+                }
+                else {
+                    Log.d("Reg", "onResponse Failed")
+                }
+            }
+
+            override fun onFailure(call: Call<String>, t: Throwable) {
+                Log.d("Reg", "error : " + t.message.toString())
+            }
+        })
+    }
+
+    private fun deleteInformation(TOKEN: String) {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://sejongcountry.dothome.co.kr/")
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val service = retrofit.create(InformationInterface::class.java)
+        val call: Call<String> = service.deleteInformation(TOKEN)
         call.enqueue(object: Callback<String> {
             override fun onResponse(call: Call<String>, response: Response<String>) {
                 if(response.isSuccessful && response.body() != null) {

@@ -11,8 +11,8 @@ import androidx.core.app.ActivityCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.firestoreSettings
+//import com.google.firebase.firestore.FirebaseFirestore
+//import com.google.firebase.firestore.ktx.firestoreSettings
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.android.synthetic.main.announce_insert_main.*
@@ -37,7 +37,7 @@ import java.security.NoSuchAlgorithmException
 class MainActivity : AppCompatActivity() {
 
     var auth : FirebaseAuth? = null
-    var firestore : FirebaseFirestore? = null
+    //var firestore : FirebaseFirestore? = null
     private val firebaseViewModel : FirebaseViewModel
         get() {
             TODO()
@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         auth = Firebase.auth
-        firestore = FirebaseFirestore.getInstance()
+        //firestore = FirebaseFirestore.getInstance()
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if(task.isSuccessful) {
                 userToken = task.result
@@ -198,9 +198,36 @@ class MainActivity : AppCompatActivity() {
                     userDTO.uId = auth?.currentUser?.uid
                     userDTO.userId = auth?.currentUser?.email
                     userDTO.token = userToken
-                    firestore?.collection("Information")?.document(userToken)?.set(userDTO)
+                    //firestore?.collection("Information")?.document(userToken)?.set(userDTO)
+                    insertInformation(userDTO)
                 }
             }
+    }
+
+    private fun insertInformation(userDTO: UserDTO) {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://sejongcountry.dothome.co.kr/")
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val service = retrofit.create(InformationInterface::class.java)
+        val call: Call<String> = service.insertInformation(userDTO.token!!, userDTO.uId!!, userDTO.userId!!)
+        call.enqueue(object : Callback<String> {
+            override fun onResponse(call: Call<String>, response: Response<String>) {
+                if(response.isSuccessful && response.body() != null) {
+                    var result = response.body().toString()
+                    Log.d("Reg", "onResponse Success : " + response.toString())
+                    Log.d("Reg", "onResponse Success : " + result)
+                }
+                else {
+                    Log.d("Reg", "onResponse Failed")
+                }
+            }
+
+            override fun onFailure(call: Call<String>, t: Throwable) {
+                Log.d("Reg", "error : " + t.message.toString())
+            }
+        })
     }
 
     private fun getHash(str: String) : String {

@@ -15,20 +15,27 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
-import com.google.firebase.firestore.FirebaseFirestore
+//import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.android.synthetic.main.announce_list_item.*
 import kotlinx.android.synthetic.main.announce_list_item.view.*
 import kotlinx.android.synthetic.main.anounce_main.*
 import kotlinx.android.synthetic.main.setting_main.*
 import kotlinx.android.synthetic.main.setting_main.back_button
+import org.json.JSONObject
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.io.File
 
 class AnounceActivity : AppCompatActivity() {
 
     val items = mutableListOf<ListViewItem4>()
     val adapter = ListViewAdapter4(items)
-    val fireStore = FirebaseFirestore.getInstance()
+    //val fireStore = FirebaseFirestore.getInstance()
     val fireStorage = FirebaseStorage.getInstance()
     var mediaPlayer : MediaPlayer? = null
 
@@ -86,16 +93,17 @@ class AnounceActivity : AppCompatActivity() {
         setContentView(R.layout.anounce_main)
 
         listView.adapter = adapter
-        fireStore.collection("Notification")
-            .get()
-            .addOnSuccessListener { result->
-                for(document in result) {
-                    val date = document["date"].toString()
-                    val name = document["name"].toString()
-                    items.add(ListViewItem4(name, date, 0))
-                    adapter.notifyDataSetChanged()
-                }
-            }
+//        fireStore.collection("Notification")
+//            .get()
+//            .addOnSuccessListener { result->
+//                for(document in result) {
+//                    val date = document["date"].toString()
+//                    val name = document["name"].toString()
+//                    items.add(ListViewItem4(name, date, 0))
+//                    adapter.notifyDataSetChanged()
+//                }
+//            }
+        selectNotification()
 
         back_button.setOnClickListener({
             stopAnnounce()
@@ -131,6 +139,46 @@ class AnounceActivity : AppCompatActivity() {
             overridePendingTransition(R.anim.slide_left_enter,R.anim.slide_left_exit)
             finish()
         }
+    }
+
+    private fun selectNotification() {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://sejongcountry.dothome.co.kr/")
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val service = retrofit.create(NotificationInterface::class.java)
+        val call: Call<String> = service.selectNotification()
+        call.enqueue(object: Callback<String> {
+            override fun onResponse(call: Call<String>, response: Response<String>) {
+                if(response.isSuccessful && response.body() != null) {
+                    var result = response.body().toString()
+                    Log.d("Reg", "onResponse Success : " + response.toString())
+                    Log.d("Reg", "onResponse Success : " + result)
+
+                    val info = JSONObject(result)
+                    val array = info.optJSONArray("result")
+                    var i = 0
+                    while(i < array.length()) {
+                        val jsonObject = array.getJSONObject(i)
+                        val NAME = jsonObject.getString("NAME")
+                        val DATE = jsonObject.getString("DATE")
+
+                        items.add(ListViewItem4(NAME, DATE, 0))
+
+                        i++
+                    }
+                    adapter.notifyDataSetChanged()
+                }
+                else {
+                    Log.d("Reg", "onResponse Failed")
+                }
+            }
+
+            override fun onFailure(call: Call<String>, t: Throwable) {
+                Log.d("Reg", "error : " + t.message.toString())
+            }
+        })
     }
 
 }

@@ -27,13 +27,14 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
-import com.google.firebase.firestore.FirebaseFirestore
+//import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.google.firebase.storage.ktx.storage
 import kotlinx.android.synthetic.main.announce_insert_main.*
+import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -54,7 +55,7 @@ class AnnounceSpeakActivity : AppCompatActivity(){
     private lateinit var mikeanimation: AnimationDrawable
     var notificationDTO = NotificationDTO()
     var fireStorage : FirebaseStorage? = null
-    var fireStore : FirebaseFirestore? = null
+    //var fireStore : FirebaseFirestore? = null
     var tokens = mutableListOf<String>()
 
     private fun initFirebase(){
@@ -132,15 +133,16 @@ class AnnounceSpeakActivity : AppCompatActivity(){
         setContentView(R.layout.announce_insert_main)
 
         fireStorage = FirebaseStorage.getInstance()
-        fireStore = FirebaseFirestore.getInstance()
-        fireStore?.collection("Information")
-            ?.get()
-            ?.addOnSuccessListener { result ->
-                for(document in result) {
-                    val token = document["token"].toString()
-                    tokens.add(token)
-                }
-            }
+//        fireStore = FirebaseFirestore.getInstance()
+//        fireStore?.collection("Information")
+//            ?.get()
+//            ?.addOnSuccessListener { result ->
+//                for(document in result) {
+//                    val token = document["token"].toString()
+//                    tokens.add(token)
+//                }
+//            }
+        selectInformation()
 
         initFirebase()
         requestAudioPermission()
@@ -274,7 +276,8 @@ class AnnounceSpeakActivity : AppCompatActivity(){
                 //storageRef?.putStream(stream)?.addOnSuccessListener {
                 notificationDTO.name = fileName
                 notificationDTO.date = SimpleDateFormat("yyyy년 MM월 dd일 HH시 mm분").format(Date())
-                fireStore?.collection("Notification")?.document(fileName)?.set(notificationDTO)
+                //fireStore?.collection("Notification")?.document(fileName)?.set(notificationDTO)
+                insertNotification(notificationDTO)
 
                 //알림 보내기
                 for (token in tokens) {
@@ -310,6 +313,70 @@ class AnnounceSpeakActivity : AppCompatActivity(){
                     var result = response.body().toString()
                     Log.d("Reg", "onResponse Success : " + response.toString())
                     Log.d("Reg", "onResponse Success : " + result)
+                }
+                else {
+                    Log.d("Reg", "onResponse Failed")
+                }
+            }
+
+            override fun onFailure(call: Call<String>, t: Throwable) {
+                Log.d("Reg", "error : " + t.message.toString())
+            }
+        })
+    }
+
+    private fun insertNotification(notificationDTO: NotificationDTO) {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://sejongcountry.dothome.co.kr/")
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val service = retrofit.create(NotificationInterface::class.java)
+        val call: Call<String> = service.insertNotification(notificationDTO.name!!, notificationDTO.date!!)
+        call.enqueue(object: Callback<String> {
+            override fun onResponse(call: Call<String>, response: Response<String>) {
+                if(response.isSuccessful && response.body() != null) {
+                    var result = response.body().toString()
+                    Log.d("Reg", "onResponse Success : " + response.toString())
+                    Log.d("Reg", "onResponse Success : " + result)
+                }
+                else {
+                    Log.d("Reg", "onResponse Failed")
+                }
+            }
+
+            override fun onFailure(call: Call<String>, t: Throwable) {
+                Log.d("Reg", "error : " + t.message.toString())
+            }
+        })
+    }
+
+    private fun selectInformation() {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://sejongcountry.dothome.co.kr/")
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val service = retrofit.create(InformationInterface::class.java)
+        val call: Call<String> = service.selectInformation()
+        call.enqueue(object: Callback<String> {
+            override fun onResponse(call: Call<String>, response: Response<String>) {
+                if(response.isSuccessful && response.body() != null) {
+                    var result = response.body().toString()
+                    Log.d("Reg", "onResponse Success : " + response.toString())
+                    Log.d("Reg", "onResponse Success : " + result)
+
+                    val info = JSONObject(result)
+                    val array = info.optJSONArray("result")
+                    var i = 0
+                    while(i < array.length()) {
+                        val jsonObject = array.getJSONObject(i)
+                        val token = jsonObject.getString("TOKEN")
+
+                        tokens.add(token)
+
+                        i++
+                    }
                 }
                 else {
                     Log.d("Reg", "onResponse Failed")
